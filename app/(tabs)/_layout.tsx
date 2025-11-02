@@ -1,45 +1,98 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
-import { Platform } from 'react-native';
+import { Tabs } from "expo-router"
+import React from "react"
 
-import { HapticTab } from '@/components/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import TabBarBackground from '@/components/ui/TabBarBackground';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { AnimatedTabIcon } from "@/components/AnimatedTabIcon"
+import { HapticTab } from "@/components/HapticTab"
+import { Platform } from "react-native"
+import { useTheme } from "react-native-paper"
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const theme = useTheme()
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: theme.colors.primary,
         headerShown: false,
         tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
-        tabBarStyle: Platform.select({
-          ios: {
-            // Use a transparent background on iOS to show the blur effect
-            position: 'absolute',
-          },
-          default: {},
-        }),
-      }}>
+        tabBarStyle: {
+          backgroundColor: theme.colors.surface,
+          borderTopWidth: 0,
+          elevation: 8,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+        },
+        // 添加页面切换动画
+        animation: Platform.OS === "ios" ? "shift" : "fade",
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: "Home",
+          tabBarIcon: ({ color, focused }) => (
+            <AnimatedTabIcon
+              size={28}
+              name="house.fill"
+              color={color}
+              focused={focused}
+              animationType="bounce"
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: "Explore",
+          tabBarIcon: ({ color, focused }) => {
+            console.log(
+              `🔄 Explore tabBarIcon 被调用: focused=${focused}, color=${color}`
+            )
+            return (
+              <AnimatedTabIcon
+                size={28}
+                name="paperplane.fill"
+                color={color}
+                focused={focused}
+                animationType="rotate"
+              />
+            )
+          },
+        }}
+      />
+      <Tabs.Screen
+        name="todo"
+        options={{
+          title: "Todo",
+          tabBarIcon: ({ color, focused }) => (
+            <AnimatedTabIcon
+              size={28}
+              name="star.fill"
+              color={color}
+              focused={focused}
+              animationType="pulse"
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="community"
+        options={{
+          title: "朋友圈",
+          tabBarIcon: ({ color, focused }) => (
+            <AnimatedTabIcon
+              size={28}
+              name="heart.fill"
+              color={color}
+              focused={focused}
+              animationType="bounce"
+            />
+          ),
         }}
       />
     </Tabs>
-  );
+  )
 }
