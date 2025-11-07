@@ -46,8 +46,8 @@ function RootLayoutContent() {
   return (
     <Provider theme={isDark ? MD3DarkTheme : MD3LightTheme}>
       <SafeAreaView
-        style={{ flex: 1, backgroundColor: "red" }}
-        edges={["top", "left", "right"]}
+        style={{ flex: 1, backgroundColor: themeToken.colors.background }}
+        // edges={["top", "left", "right"]}
       >
         <Stack
           screenOptions={{
