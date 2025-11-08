@@ -1,5 +1,4 @@
 import * as Haptics from "expo-haptics"
-import { Image } from "expo-image"
 import { useEffect, useRef, useState } from "react"
 import {
   Animated,
@@ -15,7 +14,6 @@ import {
 import {
   ActivityIndicator,
   Avatar,
-  Button,
   IconButton,
   Surface,
   Text,
@@ -67,7 +65,8 @@ export default function HomeScreen() {
     {
       id: "1",
       type: "assistant",
-      content: "你好！我是豆包，有什么可以帮你的吗？你可以使用语音或文字与我交流，我还可以为您开具电子处方。",
+      content:
+        "你好！我是豆包，有什么可以帮你的吗？你可以使用语音或文字与我交流，我还可以为您开具电子处方。",
       timestamp: new Date(),
     },
   ])
@@ -121,7 +120,7 @@ export default function HomeScreen() {
     setIsRecording(true)
     setRecordingDuration(0)
     Animated.spring(pressAnimation, {
-      toValue: 1.2,
+      toValue: 1.05,
       useNativeDriver: true,
     }).start()
   }
@@ -364,10 +363,7 @@ export default function HomeScreen() {
             />
             <Text
               variant="titleMedium"
-              style={[
-                styles.cardTitle,
-                { color: theme.colors.onSurface },
-              ]}
+              style={[styles.cardTitle, { color: theme.colors.onSurface }]}
             >
               电子处方
             </Text>
@@ -385,10 +381,7 @@ export default function HomeScreen() {
               </Text>
               <Text
                 variant="bodyMedium"
-                style={[
-                  styles.cardValue,
-                  { color: theme.colors.onSurface },
-                ]}
+                style={[styles.cardValue, { color: theme.colors.onSurface }]}
               >
                 {cardData.medicationName}
               </Text>
@@ -405,10 +398,7 @@ export default function HomeScreen() {
               </Text>
               <Text
                 variant="bodyMedium"
-                style={[
-                  styles.cardValue,
-                  { color: theme.colors.onSurface },
-                ]}
+                style={[styles.cardValue, { color: theme.colors.onSurface }]}
               >
                 {cardData.dosage}
               </Text>
@@ -425,10 +415,7 @@ export default function HomeScreen() {
               </Text>
               <Text
                 variant="bodyMedium"
-                style={[
-                  styles.cardValue,
-                  { color: theme.colors.onSurface },
-                ]}
+                style={[styles.cardValue, { color: theme.colors.onSurface }]}
               >
                 {cardData.frequency}
               </Text>
@@ -445,10 +432,7 @@ export default function HomeScreen() {
               </Text>
               <Text
                 variant="bodyMedium"
-                style={[
-                  styles.cardValue,
-                  { color: theme.colors.onSurface },
-                ]}
+                style={[styles.cardValue, { color: theme.colors.onSurface }]}
               >
                 {cardData.duration}
               </Text>
@@ -463,10 +447,7 @@ export default function HomeScreen() {
               />
               <Text
                 variant="bodySmall"
-                style={[
-                  styles.cardLink,
-                  { color: theme.colors.primary },
-                ]}
+                style={[styles.cardLink, { color: theme.colors.primary }]}
               >
                 在第三方应用中打开
               </Text>
@@ -636,10 +617,6 @@ export default function HomeScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
     >
-      <Image
-        source={require(`@/assets/images/${true ? "icon" : "logo"}.png`)}
-        style={{ width: undefined, height: undefined, flex: 1 }}
-      />
       {/* 消息列表 */}
       <FlatList
         ref={flatListRef}
@@ -673,75 +650,57 @@ export default function HomeScreen() {
           {
             backgroundColor: theme.colors.surface,
             borderTopColor: theme.colors.outlineVariant,
-            paddingBottom: Math.max(insets.bottom, 12),
+            // paddingBottom: Math.max(insets.bottom, 12),
           },
         ]}
         elevation={1}
       >
         <View style={styles.inputContainer}>
-          {/* 切换模式图标 */}
-          <IconButton
-            icon={inputMode === "voice" ? "microphone" : "keyboard"}
-            iconColor={theme.colors.primary}
-            size={24}
-            onPress={() => {
-              setInputMode(inputMode === "voice" ? "text" : "voice")
-              if (inputMode === "voice" && isRecording) {
-                setIsRecording(false)
-              }
-            }}
-            style={styles.modeToggleIcon}
-          />
+          {/* 切换模式图标 - 录音时占位但不可见 */}
+          {/* <View style={styles.modeToggleIconContainer}> */}
+          {!isRecording && !isTranscribing && (
+            <IconButton
+              icon={inputMode === "voice" ? "microphone" : "keyboard"}
+              iconColor={theme.colors.primary}
+              size={24}
+              onPress={() => {
+                setInputMode(inputMode === "voice" ? "text" : "voice")
+                if (inputMode === "voice" && isRecording) {
+                  setIsRecording(false)
+                }
+              }}
+              style={styles.modeToggleIcon}
+            />
+          )}
+          {/* </View> */}
 
           {/* 输入框/按钮 */}
           {inputMode === "voice" ? (
-            <Pressable
-              style={styles.voiceButtonWrapper}
-              onPressIn={handlePressIn}
-              onPressOut={handlePressOut}
-              disabled={isTranscribing}
+            <Animated.View
+              style={[
+                styles.voiceButtonWrapper,
+                {
+                  transform: [{ scale: pressAnimation }],
+                },
+              ]}
             >
-              <Animated.View
+              <Pressable
+                onPressIn={handlePressIn}
+                onPressOut={handlePressOut}
+                disabled={isTranscribing}
                 style={[
+                  styles.voiceButton,
                   {
-                    transform: [{ scale: pressAnimation }],
-                    flex: 1,
+                    backgroundColor: isRecording
+                      ? theme.colors.errorContainer
+                      : theme.colors.surface,
+                    borderColor: isRecording
+                      ? theme.colors.error
+                      : theme.colors.outline,
                   },
                 ]}
               >
-                <Button
-                  mode="outlined"
-                  icon={
-                    isTranscribing
-                      ? undefined
-                      : isRecording
-                      ? "stop-circle"
-                      : "microphone"
-                  }
-                  onPressIn={handlePressIn}
-                  onPressOut={handlePressOut}
-                  disabled={isTranscribing}
-                  style={[
-                    styles.voiceButton,
-                    {
-                      backgroundColor: isRecording
-                        ? theme.colors.errorContainer
-                        : theme.colors.surface,
-                      borderColor: isRecording
-                        ? theme.colors.error
-                        : theme.colors.outline,
-                    },
-                  ]}
-                  labelStyle={[
-                    styles.voiceButtonLabel,
-                    {
-                      color: isRecording
-                        ? theme.colors.error
-                        : theme.colors.primary,
-                    },
-                  ]}
-                  contentStyle={styles.voiceButtonContent}
-                >
+                <View style={styles.voiceButtonContent}>
                   {isTranscribing ? (
                     <View style={styles.voiceButtonInner}>
                       <ActivityIndicator
@@ -758,32 +717,51 @@ export default function HomeScreen() {
                         转写中...
                       </Text>
                     </View>
-                  ) : isRecording ? (
-                    "正在录音"
                   ) : (
-                    "长按输入语音"
+                    <Text
+                      style={[
+                        styles.voiceButtonLabel,
+                        {
+                          color: isRecording
+                            ? theme.colors.error
+                            : theme.colors.primary,
+                        },
+                      ]}
+                    >
+                      {isRecording ? "正在录音" : "长按输入语音"}
+                    </Text>
                   )}
-                </Button>
-              </Animated.View>
-            </Pressable>
+                </View>
+              </Pressable>
+            </Animated.View>
           ) : (
-            <TextInput
-              mode="outlined"
-              placeholder="输入消息..."
-              value={textInput}
-              onChangeText={setTextInput}
-              style={styles.textInput}
-              multiline
-              maxLength={500}
-              right={
-                <TextInput.Icon
-                  icon="send"
-                  onPress={handleSendText}
-                  disabled={!textInput.trim()}
-                />
-              }
-              onSubmitEditing={handleSendText}
-            />
+            <View style={styles.textInputWrapper} pointerEvents="box-none">
+              <TextInput
+                mode="outlined"
+                placeholder="输入消息..."
+                value={textInput}
+                onChangeText={setTextInput}
+                style={styles.textInput}
+                multiline
+                maxLength={500}
+                contentStyle={styles.textInputContent}
+                outlineStyle={styles.textInputOutline}
+                onSubmitEditing={handleSendText}
+                editable={true}
+              />
+              <IconButton
+                icon="send"
+                size={24}
+                iconColor={
+                  textInput.trim()
+                    ? theme.colors.primary
+                    : theme.colors.onSurfaceDisabled
+                }
+                onPress={handleSendText}
+                disabled={!textInput.trim()}
+                style={styles.sendIconButton}
+              />
+            </View>
           )}
         </View>
       </Surface>
@@ -846,21 +824,41 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 4,
+    minHeight: 48,
+  },
+  modeToggleIconContainer: {
+    width: 48,
+    height: 48,
+    justifyContent: "center",
+    alignItems: "center",
   },
   modeToggleIcon: {
     margin: 0,
+    marginTop: 4,
   },
   voiceButtonWrapper: {
     flex: 1,
+    height: 48,
   },
   voiceButton: {
     flex: 1,
     borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   voiceButtonContent: {
-    paddingVertical: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  voiceButtonIcon: {
+    margin: 0,
+    marginRight: -8,
   },
   voiceButtonLabel: {
     fontSize: 16,
@@ -898,9 +896,28 @@ const styles = StyleSheet.create({
     borderRadius: 1.25,
     minHeight: 4,
   },
+  textInputWrapper: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 4,
+  },
   textInput: {
     backgroundColor: "transparent",
     flex: 1,
+    minHeight: 48,
+    maxHeight: 120,
+  },
+  textInputContent: {
+    paddingVertical: 8,
+    paddingRight: 0,
+  },
+  textInputOutline: {
+    borderRadius: 8,
+  },
+  sendIconButton: {
+    margin: 0,
+    marginTop: 4,
   },
   thinkingContainer: {
     flexDirection: "row",
