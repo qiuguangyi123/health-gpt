@@ -1,8 +1,9 @@
+import WaveformBar from "@/components/WaveformBar"
+import type { ChatMessage, InputMode, PrescriptionData } from "@/types/voice"
 import { font } from "@/utils/scale"
 import * as Haptics from "expo-haptics"
-import { useEffect, useRef, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import {
-  Animated,
   Dimensions,
   FlatList,
   KeyboardAvoidingView,
@@ -21,57 +22,32 @@ import {
   TextInput,
   useTheme,
 } from "react-native-paper"
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { moderateScale, scale, verticalScale } from "react-native-size-matters"
-
-interface Message {
-  id: string
-  type: "user" | "assistant"
-  content: string
-  duration?: number // 语音时长（秒）
-  timestamp: Date
-  isVoice?: boolean
-  isThinking?: boolean // 是否正在思考中
-  cardType?: "prescription" | "appointment" | "normal" // 卡片类型
-  cardData?: PrescriptionData | AppointmentCard // 卡片数据
-}
-
-interface Medication {
-  medicationName: string
-  dosage: string
-  frequency: string
-  duration: string
-  deepLink?: string // 第三方app的deep link
-}
-
-interface PrescriptionData {
-  medications: Medication[] // 支持多个药物
-}
-
-interface AppointmentCard {
-  title: string
-  date: string
-  location: string
-  deepLink?: string
-}
-
-// 模拟语音波形数据
-const generateWaveformData = (count: number = 30): number[] => {
-  return Array.from({ length: count }, () => Math.random() * 0.8 + 0.2)
-}
-
-type InputMode = "voice" | "text"
 
 export default function HomeScreen() {
   const theme = useTheme()
   const insets = useSafeAreaInsets()
   const [inputMode, setInputMode] = useState<InputMode>("voice")
   const [textInput, setTextInput] = useState("")
-  const [messages, setMessages] = useState<Message[]>([
+  const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "1",
       type: "assistant",
       content:
+        process.env.EXPO_PUBLIC_QGY +
         "你好！我是豆包，有什么可以帮你的吗？你可以使用语音或文字与我交流，我还可以为您开具电子处方。",
       timestamp: new Date(),
     },
@@ -79,28 +55,16 @@ export default function HomeScreen() {
   const [isRecording, setIsRecording] = useState(false)
   const [recordingDuration, setRecordingDuration] = useState(0)
   const [isTranscribing, setIsTranscribing] = useState(false)
-  const [waveformData, setWaveformData] = useState<number[]>([])
   const durationTimer = useRef<ReturnType<typeof setInterval> | null>(null)
-  const waveformTimer = useRef<ReturnType<typeof setInterval> | null>(null)
   const flatListRef = useRef<FlatList>(null)
-  const pressAnimation = useRef(new Animated.Value(1)).current
 
-  // 生成波形动画
-  useEffect(() => {
-    if (isRecording) {
-      const interval = setInterval(() => {
-        setWaveformData(generateWaveformData())
-      }, 100)
-      waveformTimer.current = interval
-      return () => {
-        if (waveformTimer.current) {
-          clearInterval(waveformTimer.current)
-        }
-      }
-    } else {
-      setWaveformData([])
-    }
-  }, [isRecording])
+  // Reanimated shared values for animations
+  const pressScale = useSharedValue(1)
+
+  // Animated styles for voice button press
+  const pressAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }))
 
   // 录制时长计时器
   useEffect(() => {
@@ -125,17 +89,17 @@ export default function HomeScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
     setIsRecording(true)
     setRecordingDuration(0)
-    Animated.spring(pressAnimation, {
-      toValue: 1.05,
-      useNativeDriver: true,
-    }).start()
+    pressScale.value = withSpring(1.05, {
+      damping: 12,
+      stiffness: 200,
+    })
   }
 
   const handlePressOut = async () => {
-    Animated.spring(pressAnimation, {
-      toValue: 1,
-      useNativeDriver: true,
-    }).start()
+    pressScale.value = withSpring(1, {
+      damping: 12,
+      stiffness: 200,
+    })
 
     if (recordingDuration < 0.5) {
       // 录制时间太短，取消
@@ -152,7 +116,7 @@ export default function HomeScreen() {
     // 模拟语音转录
     setTimeout(() => {
       const transcript = `这是一条语音消息（${recordingDuration.toFixed(1)}秒）`
-      const newMessage: Message = {
+      const newMessage: ChatMessage = {
         id: Date.now().toString(),
         type: "user",
         content: transcript,
@@ -171,7 +135,7 @@ export default function HomeScreen() {
   const handleSendText = () => {
     if (!textInput.trim()) return
 
-    const newMessage: Message = {
+    const newMessage: ChatMessage = {
       id: Date.now().toString(),
       type: "user",
       content: textInput.trim(),
@@ -184,10 +148,10 @@ export default function HomeScreen() {
     sendMessage(newMessage)
   }
 
-  const sendMessage = (userMessage: Message) => {
+  const sendMessage = (userMessage: ChatMessage) => {
     // 乐观更新：立即显示思考中的消息
     const thinkingMessageId = `thinking-${Date.now()}`
-    const thinkingMessage: Message = {
+    const thinkingMessage: ChatMessage = {
       id: thinkingMessageId,
       type: "assistant",
       content: "",
@@ -209,7 +173,7 @@ export default function HomeScreen() {
 
         if (shouldShowPrescription) {
           // 返回处方卡片消息
-          const prescriptionMessage: Message = {
+          const prescriptionMessage: ChatMessage = {
             id: (Date.now() + 1).toString(),
             type: "assistant",
             content: "根据您的症状，我为您开具了以下处方，请查收：",
@@ -244,7 +208,7 @@ export default function HomeScreen() {
           return [...filtered, prescriptionMessage]
         } else {
           // 普通回复
-          const aiMessage: Message = {
+          const aiMessage: ChatMessage = {
             id: (Date.now() + 1).toString(),
             type: "assistant",
             content: userMessage.isVoice
@@ -277,60 +241,63 @@ export default function HomeScreen() {
     })
   }
 
-  // 思考中动画组件
+  // 思考中动画组件 - 使用 Reanimated
   const ThinkingDots = () => {
-    const dot1Anim = useRef(new Animated.Value(0)).current
-    const dot2Anim = useRef(new Animated.Value(0)).current
-    const dot3Anim = useRef(new Animated.Value(0)).current
+    const dot1Progress = useSharedValue(0)
+    const dot2Progress = useSharedValue(0)
+    const dot3Progress = useSharedValue(0)
 
     useEffect(() => {
-      const createAnimation = (animValue: Animated.Value, delay: number) => {
-        return Animated.loop(
-          Animated.sequence([
-            Animated.delay(delay),
-            Animated.timing(animValue, {
-              toValue: 1,
-              duration: 400,
-              useNativeDriver: true,
+      // 使用 withRepeat 和 withSequence 创建循环动画
+      dot1Progress.value = withRepeat(
+        withSequence(
+          withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0, { duration: 1000, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1, // 无限循环
+        false
+      )
+
+      dot2Progress.value = withDelay(
+        150,
+        withRepeat(
+          withSequence(
+            withTiming(1, {
+              duration: 1000,
+              easing: Easing.inOut(Easing.ease),
             }),
-            Animated.timing(animValue, {
-              toValue: 0,
-              duration: 400,
-              useNativeDriver: true,
-            }),
-          ])
+            withTiming(0, { duration: 1000, easing: Easing.inOut(Easing.ease) })
+          ),
+          -1,
+          false
         )
-      }
+      )
 
-      const anim1 = createAnimation(dot1Anim, 0)
-      const anim2 = createAnimation(dot2Anim, 150)
-      const anim3 = createAnimation(dot3Anim, 300)
-
-      anim1.start()
-      anim2.start()
-      anim3.start()
-
-      return () => {
-        anim1.stop()
-        anim2.stop()
-        anim3.stop()
-      }
+      dot3Progress.value = withDelay(
+        300,
+        withRepeat(
+          withSequence(
+            withTiming(1, {
+              duration: 1000,
+              easing: Easing.inOut(Easing.ease),
+            }),
+            withTiming(0, { duration: 1000, easing: Easing.inOut(Easing.ease) })
+          ),
+          -1,
+          false
+        )
+      )
     }, [])
 
-    const dotStyle = (animValue: Animated.Value) => ({
-      opacity: animValue.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0.3, 1],
-      }),
-      transform: [
-        {
-          translateY: animValue.interpolate({
-            inputRange: [0, 1],
-            outputRange: [0, -4],
-          }),
-        },
-      ],
-    })
+    const createDotStyle = (progress: typeof dot1Progress) =>
+      useAnimatedStyle(() => ({
+        opacity: 0.3 + progress.value * 0.7,
+        transform: [{ translateY: -progress.value * 4 }],
+      }))
+
+    const dot1Style = createDotStyle(dot1Progress)
+    const dot2Style = createDotStyle(dot2Progress)
+    const dot3Style = createDotStyle(dot3Progress)
 
     return (
       <View style={styles.thinkingContainer}>
@@ -338,21 +305,21 @@ export default function HomeScreen() {
           style={[
             styles.thinkingDot,
             { backgroundColor: theme.colors.primary },
-            dotStyle(dot1Anim),
+            dot1Style,
           ]}
         />
         <Animated.View
           style={[
             styles.thinkingDot,
             { backgroundColor: theme.colors.primary },
-            dotStyle(dot2Anim),
+            dot2Style,
           ]}
         />
         <Animated.View
           style={[
             styles.thinkingDot,
             { backgroundColor: theme.colors.primary },
-            dotStyle(dot3Anim),
+            dot3Style,
           ]}
         />
       </View>
@@ -392,134 +359,142 @@ export default function HomeScreen() {
 
         {/* 药物列表 */}
         {cardData.medications.map((medication, index) => (
-          <Pressable
+          <Animated.View
             key={index}
-            onPress={() => handleMedicationPress(medication.deepLink)}
+            entering={FadeIn.delay(index * 100)
+              .duration(300)
+              .springify()
+              .damping(15)}
           >
-            <Surface
-              style={[
-                styles.medicationCard,
-                { backgroundColor: theme.colors.surface },
-                index < cardData.medications.length - 1 && {
-                  marginBottom: verticalScale(8),
-                },
-              ]}
-              elevation={2}
+            <Pressable
+              onPress={() => handleMedicationPress(medication.deepLink)}
             >
-              <View style={styles.medicationHeader}>
-                <View style={styles.medicationNumberBadge}>
+              <Surface
+                style={[
+                  styles.medicationCard,
+                  { backgroundColor: theme.colors.surface },
+                  index < cardData.medications.length - 1 && {
+                    marginBottom: verticalScale(8),
+                  },
+                ]}
+                elevation={2}
+              >
+                <View style={styles.medicationHeader}>
+                  <View style={styles.medicationNumberBadge}>
+                    <Text
+                      variant="labelSmall"
+                      style={[
+                        styles.medicationNumber,
+                        { color: theme.colors.primary },
+                      ]}
+                    >
+                      {index + 1}
+                    </Text>
+                  </View>
                   <Text
-                    variant="labelSmall"
+                    variant="titleSmall"
                     style={[
-                      styles.medicationNumber,
-                      { color: theme.colors.primary },
+                      styles.medicationName,
+                      { color: theme.colors.onSurface },
                     ]}
                   >
-                    {index + 1}
+                    {medication.medicationName}
                   </Text>
                 </View>
-                <Text
-                  variant="titleSmall"
-                  style={[
-                    styles.medicationName,
-                    { color: theme.colors.onSurface },
-                  ]}
-                >
-                  {medication.medicationName}
-                </Text>
-              </View>
 
-              <View style={styles.cardContent}>
-                <View style={styles.cardRow}>
-                  <Text
-                    variant="bodySmall"
-                    style={[
-                      styles.cardLabel,
-                      { color: theme.colors.onSurfaceVariant },
-                    ]}
-                  >
-                    用量:
-                  </Text>
-                  <Text
-                    variant="bodyMedium"
-                    style={[
-                      styles.cardValue,
-                      { color: theme.colors.onSurface },
-                    ]}
-                  >
-                    {medication.dosage}
-                  </Text>
+                <View style={styles.cardContent}>
+                  <View style={styles.cardRow}>
+                    <Text
+                      variant="bodySmall"
+                      style={[
+                        styles.cardLabel,
+                        { color: theme.colors.onSurfaceVariant },
+                      ]}
+                    >
+                      用量:
+                    </Text>
+                    <Text
+                      variant="bodyMedium"
+                      style={[
+                        styles.cardValue,
+                        { color: theme.colors.onSurface },
+                      ]}
+                    >
+                      {medication.dosage}
+                    </Text>
+                  </View>
+                  <View style={styles.cardRow}>
+                    <Text
+                      variant="bodySmall"
+                      style={[
+                        styles.cardLabel,
+                        { color: theme.colors.onSurfaceVariant },
+                      ]}
+                    >
+                      频次:
+                    </Text>
+                    <Text
+                      variant="bodyMedium"
+                      style={[
+                        styles.cardValue,
+                        { color: theme.colors.onSurface },
+                      ]}
+                    >
+                      {medication.frequency}
+                    </Text>
+                  </View>
+                  <View style={styles.cardRow}>
+                    <Text
+                      variant="bodySmall"
+                      style={[
+                        styles.cardLabel,
+                        { color: theme.colors.onSurfaceVariant },
+                      ]}
+                    >
+                      疗程:
+                    </Text>
+                    <Text
+                      variant="bodyMedium"
+                      style={[
+                        styles.cardValue,
+                        { color: theme.colors.onSurface },
+                      ]}
+                    >
+                      {medication.duration}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.cardRow}>
-                  <Text
-                    variant="bodySmall"
-                    style={[
-                      styles.cardLabel,
-                      { color: theme.colors.onSurfaceVariant },
-                    ]}
-                  >
-                    频次:
-                  </Text>
-                  <Text
-                    variant="bodyMedium"
-                    style={[
-                      styles.cardValue,
-                      { color: theme.colors.onSurface },
-                    ]}
-                  >
-                    {medication.frequency}
-                  </Text>
-                </View>
-                <View style={styles.cardRow}>
-                  <Text
-                    variant="bodySmall"
-                    style={[
-                      styles.cardLabel,
-                      { color: theme.colors.onSurfaceVariant },
-                    ]}
-                  >
-                    疗程:
-                  </Text>
-                  <Text
-                    variant="bodyMedium"
-                    style={[
-                      styles.cardValue,
-                      { color: theme.colors.onSurface },
-                    ]}
-                  >
-                    {medication.duration}
-                  </Text>
-                </View>
-              </View>
 
-              {medication.deepLink && (
-                <View style={styles.cardFooter}>
-                  <IconButton
-                    icon="open-in-new"
-                    size={16}
-                    iconColor={theme.colors.primary}
-                    style={{ margin: 0 }}
-                  />
-                  <Text
-                    variant="bodySmall"
-                    style={[styles.cardLink, { color: theme.colors.primary }]}
-                  >
-                    在第三方应用中打开
-                  </Text>
-                </View>
-              )}
-            </Surface>
-          </Pressable>
+                {medication.deepLink && (
+                  <View style={styles.cardFooter}>
+                    <IconButton
+                      icon="open-in-new"
+                      size={16}
+                      iconColor={theme.colors.primary}
+                      style={{ margin: 0 }}
+                    />
+                    <Text
+                      variant="bodySmall"
+                      style={[styles.cardLink, { color: theme.colors.primary }]}
+                    >
+                      在第三方应用中打开
+                    </Text>
+                  </View>
+                )}
+              </Surface>
+            </Pressable>
+          </Animated.View>
         ))}
       </View>
     )
   }
 
-  const renderMessage = ({ item }: { item: Message }) => {
+  const renderMessage = ({ item }: { item: ChatMessage }) => {
     const isUser = item.type === "user"
 
     return (
-      <View
+      <Animated.View
+        entering={FadeInDown.duration(200).springify().damping(15)}
         style={[
           styles.messageContainer,
           isUser
@@ -553,30 +528,6 @@ export default function HomeScreen() {
             { maxWidth: Dimensions.get("window").width * 0.72 },
           ]}
         >
-          {/* {item.isVoice && (
-            <View style={styles.voiceIndicator}>
-              <IconButton
-                icon="waveform"
-                iconColor={isUser ? "#fff" : theme.colors.primary}
-                size={18}
-                style={styles.voiceIcon}
-              />
-              {item.duration && (
-                <Text
-                  variant="bodySmall"
-                  style={[
-                    styles.voiceDuration,
-                    {
-                      color: isUser ? "#fff" : theme.colors.onSurfaceVariant,
-                    },
-                  ]}
-                >
-                  {formatTime(item.duration)}
-                </Text>
-              )}
-            </View>
-          )} */}
-
           {/* 思考中状态 */}
           {item.isThinking ? (
             <View style={styles.thinkingWrapper}>
@@ -640,26 +591,19 @@ export default function HomeScreen() {
             ]}
           />
         )}
-      </View>
+      </Animated.View>
     )
   }
 
   const renderWaveform = () => {
-    if (!isRecording || waveformData.length === 0) return null
+    if (!isRecording) return null
 
+    // 固定30个波形条，避免重新渲染
+    const barCount = 30
     return (
       <View style={styles.waveformContainer}>
-        {waveformData.map((height, index) => (
-          <Animated.View
-            key={index}
-            style={[
-              styles.waveformBar,
-              {
-                height: height * 40,
-                backgroundColor: theme.colors.primary,
-              },
-            ]}
-          />
+        {Array.from({ length: barCount }, (_, index) => (
+          <WaveformBar key={index} index={index} color={theme.colors.primary} />
         ))}
       </View>
     )
@@ -707,14 +651,12 @@ export default function HomeScreen() {
           {
             backgroundColor: theme.colors.surface,
             borderTopColor: theme.colors.outlineVariant,
-            // paddingBottom: Math.max(insets.bottom, 12),
           },
         ]}
         elevation={1}
       >
         <View style={styles.inputContainer}>
-          {/* 切换模式图标 - 录音时占位但不可见 */}
-          {/* <View style={styles.modeToggleIconContainer}> */}
+          {/* 切换模式图标 */}
           {!isRecording && !isTranscribing && (
             <IconButton
               icon={inputMode === "voice" ? "microphone" : "keyboard"}
@@ -729,17 +671,11 @@ export default function HomeScreen() {
               style={styles.modeToggleIcon}
             />
           )}
-          {/* </View> */}
 
           {/* 输入框/按钮 */}
           {inputMode === "voice" ? (
             <Animated.View
-              style={[
-                styles.voiceButtonWrapper,
-                {
-                  transform: [{ scale: pressAnimation }],
-                },
-              ]}
+              style={[styles.voiceButtonWrapper, pressAnimatedStyle]}
             >
               <Pressable
                 onPressIn={handlePressIn}
@@ -946,11 +882,6 @@ const styles = StyleSheet.create({
     height: verticalScale(40),
     gap: scale(2),
   },
-  waveformBar: {
-    width: scale(2.5),
-    borderRadius: moderateScale(1.25),
-    minHeight: verticalScale(4),
-  },
   textInputWrapper: {
     flex: 1,
     flexDirection: "row",
@@ -982,9 +913,9 @@ const styles = StyleSheet.create({
     paddingVertical: verticalScale(8),
   },
   thinkingDot: {
-    width: scale(8),
-    height: verticalScale(8),
-    borderRadius: moderateScale(4),
+    width: scale(6),
+    height: verticalScale(6),
+    borderRadius: moderateScale(3),
   },
   thinkingWrapper: {
     alignItems: "center",

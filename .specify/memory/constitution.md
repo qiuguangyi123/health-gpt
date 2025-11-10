@@ -1,50 +1,219 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+同步影响报告 (Sync Impact Report)
+=================================
+版本变更: 未版本化 → v1.0.0
+修改的原则: 无 (初始化)
+新增章节:
+  - 核心原则 (5个原则)
+  - 技术标准
+  - 开发工作流
+  - 治理规则
+移除章节: 无
+模板更新状态:
+  - ✅ .specify/memory/constitution.md (已创建)
+  - ⚠ .specify/templates/plan-template.md (待后续验证)
+  - ⚠ .specify/templates/spec-template.md (待后续验证)
+  - ⚠ .specify/templates/tasks-template.md (待后续验证)
+待办事项:
+  - 批准日期需要在正式批准后填写
+-->
 
-## Core Principles
+# React Native 移动应用项目宪章
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+## 核心原则
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### 一、中文优先原则 (NON-NEGOTIABLE)
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+**必须遵守**: 所有项目文档、代码注释、提交信息、以及与AI助手的交互必须使用中文
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+**理由**:
+- 确保团队成员之间的沟通无障碍
+- 提高文档可读性和可维护性
+- 保持项目内部术语和表达的一致性
+- 减少因语言切换导致的理解偏差
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+**例外情况**:
+- 代码变量名、函数名等标识符使用英文(遵循编程规范)
+- 第三方库的官方文档引用
+- 技术术语无合适中文翻译时,使用英文并附中文说明
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+### 二、性能优先的动画原则
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+**必须遵守**: 所有动画必须运行在UI线程,确保60fps性能
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+**核心要求**:
+- 使用 `react-native-reanimated` 替代旧的 Animated API
+- 所有动画使用 `useSharedValue` 和 `useAnimatedStyle`
+- 维度计算函数 (`verticalScale`, `scale`, `moderateScale`) 必须在worklet外部调用
+- 优先使用 `transform` 和 `opacity` 属性(GPU加速)
+- 避免在worklet内调用非worklet函数
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+**详细指南**: 参见 `CLAUDE.md` 文档中的动画最佳实践
 
-## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
+### 三、选择性动画使用
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+**必须遵守**: 只在必要的地方使用动画,避免过度动画
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**关键场景需要动画**:
+- 模态窗口/对话框的转场
+- 菜单的显示/隐藏
+- 按钮按压反馈
+- 重要的状态变化
+
+**轻量级处理**:
+- 高频更新场景(列表滚动、消息条目)使用简单淡入效果
+- 持续时间控制在200-300ms
+- 避免复杂变换
+
+### 四、组件复用与封装原则
+
+**必须遵守**: 通用动画逻辑必须封装为可复用的hooks或组件
+
+**实践要求**:
+- 创建自定义hooks处理常见动画模式 (`useScaleAnimation`, `useFadeAnimation`)
+- 封装可复用的动画组件 (`<AnimatedCard>`, `<FadeInContainer>`)
+- 使用 `React.memo` 优化多实例动画组件
+- 文档化所有可复用动画的使用方法和参数
+
+### 五、渐进式功能开发
+
+**必须遵守**: 功能开发遵循MVP(最小可行产品)原则,按优先级递进
+
+**开发流程**:
+1. 识别核心功能(P1优先级) - 必须独立可测试和交付价值
+2. 实现并验证核心功能
+3. 增加增强功能(P2优先级)
+4. 添加体验优化(P3优先级)
+
+**验证标准**:
+- 每个功能优先级必须有明确的价值说明
+- P1功能必须能独立交付并为用户创造价值
+- 所有功能必须包含独立测试方案
+
+## 技术标准
+
+### 平台与技术栈
+
+- **框架**: React Native + Expo (~53.0.20)
+- **导航**: Expo Router (~5.1.4) 文件路由
+- **UI库**: React Native Paper (~5.14.5)
+- **动画**: React Native Reanimated (~3.17.4)
+- **状态管理**: React Hooks + Async Storage
+- **类型检查**: TypeScript (~5.8.3)
+
+### 代码质量要求
+
+- 所有组件必须有TypeScript类型定义
+- 复杂组件必须使用 `React.memo` 或 `useMemo` 优化
+- 动画相关代码必须包含性能注释
+- 所有功能必须在iOS和Android双平台测试
+
+### 性能标准
+
+- 应用启动时间 < 3秒
+- 页面导航转场 < 300ms
+- 列表滚动保持 60fps
+- 动画执行保持 60fps
+- 首次内容渲染(FCP) < 2秒
+
+## 开发工作流
+
+### 功能开发流程
+
+1. **规格说明阶段** (`/speckit.specify`)
+   - 使用中文编写功能规格
+   - 明确用户故事和验收标准
+   - 定义成功指标(可测量、与技术无关)
+   - 识别边缘情况
+
+2. **澄清阶段** (`/speckit.clarify`)
+   - 解决规格中的歧义
+   - 确认技术决策(在线/离线、语言支持等)
+   - 更新规格文档
+
+3. **规划阶段** (`/speckit.plan`)
+   - 生成技术实现方案
+   - 定义文件结构和数据模型
+   - 确定技术栈选型
+
+4. **任务分解** (`/speckit.tasks`)
+   - 分解为可执行任务
+   - 标识并行与串行任务
+   - 遵循TDD方法(测试先行)
+
+5. **实现阶段** (`/speckit.implement`)
+   - 按任务顺序执行
+   - 保持动画性能标准
+   - 使用中文编写注释
+
+### 代码审查要求
+
+- 所有动画代码必须验证是否符合性能标准
+- 检查是否存在worklet内调用非worklet函数
+- 确认组件是否合理使用memoization
+- 验证TypeScript类型定义完整性
+- 确保中文注释清晰准确
+
+### 提交规范
+
+提交信息格式 (使用中文):
+```
+<类型>: <简短描述>
+
+<详细说明>
+
+相关规格: specs/###-feature-name/spec.md
+```
+
+类型:
+- `feat`: 新功能
+- `fix`: 修复bug
+- `perf`: 性能优化
+- `refactor`: 重构
+- `docs`: 文档更新
+- `style`: 代码格式调整
+- `test`: 测试相关
+
+## 治理规则
+
+### 宪章权威性
+
+本宪章是项目开发的最高指导原则,所有开发实践必须符合本宪章要求。
+
+### 修订程序
+
+**提议修订**:
+- 任何团队成员可提议修订
+- 提议必须包含: 修订理由、影响分析、迁移方案
+
+**审批流程**:
+1. 在团队会议上讨论提议
+2. 获得多数成员同意
+3. 更新宪章版本号
+4. 更新相关模板和文档
+
+**版本控制**:
+- MAJOR: 移除或重新定义核心原则(向后不兼容)
+- MINOR: 新增原则或重大扩展
+- PATCH: 澄清说明、修正错误
+
+### 合规性审查
+
+**日常开发**:
+- 所有代码审查必须验证合规性
+- 自动化工具检查TypeScript类型和ESLint规则
+- 定期进行性能审计
+
+**文档合规**:
+- 所有新增文档必须使用中文
+- 技术决策必须记录理由
+- 复杂功能必须包含使用示例
+
+**指导文件**:
+- 动画开发: `CLAUDE.md`
+- 项目宪章: `.specify/memory/constitution.md`
+- 功能规格: `specs/###-feature-name/spec.md`
+
+---
+
+**版本**: v1.0.0 | **批准日期**: 2025-11-10 | **最后修订**: 2025-11-10
