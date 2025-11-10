@@ -1,3 +1,4 @@
+import { font } from "@/utils/scale"
 import * as Haptics from "expo-haptics"
 import { useEffect, useRef, useState } from "react"
 import {
@@ -21,6 +22,7 @@ import {
   useTheme,
 } from "react-native-paper"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { moderateScale, scale, verticalScale } from "react-native-size-matters"
 
 interface Message {
   id: string
@@ -31,15 +33,19 @@ interface Message {
   isVoice?: boolean
   isThinking?: boolean // 是否正在思考中
   cardType?: "prescription" | "appointment" | "normal" // 卡片类型
-  cardData?: PrescriptionCard | AppointmentCard // 卡片数据
+  cardData?: PrescriptionData | AppointmentCard // 卡片数据
 }
 
-interface PrescriptionCard {
+interface Medication {
   medicationName: string
   dosage: string
   frequency: string
   duration: string
   deepLink?: string // 第三方app的deep link
+}
+
+interface PrescriptionData {
+  medications: Medication[] // 支持多个药物
 }
 
 interface AppointmentCard {
@@ -210,11 +216,29 @@ export default function HomeScreen() {
             timestamp: new Date(),
             cardType: "prescription",
             cardData: {
-              medicationName: "阿莫西林胶囊",
-              dosage: "每次2粒，每粒0.25g",
-              frequency: "每日3次",
-              duration: "7天",
-              deepLink: "meditationapp://prescription/12345", // 示例deep link
+              medications: [
+                {
+                  medicationName: "阿莫西林胶囊",
+                  dosage: "每次2粒，每粒0.25g",
+                  frequency: "每日3次",
+                  duration: "7天",
+                  deepLink: "rxapp://prescription/amoxicillin/12345",
+                },
+                {
+                  medicationName: "布洛芬缓释胶囊",
+                  dosage: "每次1粒，每粒0.3g",
+                  frequency: "每日2次",
+                  duration: "5天",
+                  deepLink: "rxapp://prescription/ibuprofen/12346",
+                },
+                {
+                  medicationName: "维生素C片",
+                  dosage: "每次2片，每片100mg",
+                  frequency: "每日1次",
+                  duration: "14天",
+                  deepLink: "rxapp://prescription/vitaminc/12347",
+                },
+              ],
             },
           }
           return [...filtered, prescriptionMessage]
@@ -335,126 +359,159 @@ export default function HomeScreen() {
     )
   }
 
-  // 处方卡片组件
-  const renderPrescriptionCard = (cardData: PrescriptionCard) => {
-    const handlePress = () => {
-      if (cardData.deepLink) {
-        Linking.openURL(cardData.deepLink).catch(err =>
+  // 处方卡片组件 - 支持多个药物
+  const renderPrescriptionCard = (cardData: PrescriptionData) => {
+    const handleMedicationPress = (deepLink?: string) => {
+      if (deepLink) {
+        Linking.openURL(deepLink).catch(err =>
           console.error("无法打开链接:", err)
         )
       }
     }
 
     return (
-      <Pressable onPress={handlePress}>
-        <Surface
-          style={[
-            styles.prescriptionCard,
-            { backgroundColor: theme.colors.surface },
-          ]}
-          elevation={2}
-        >
-          <View style={styles.cardHeader}>
-            <IconButton
-              icon="pill"
-              size={20}
-              iconColor={theme.colors.primary}
-              style={styles.cardIcon}
-            />
-            <Text
-              variant="titleMedium"
-              style={[styles.cardTitle, { color: theme.colors.onSurface }]}
+      <View>
+        {/* 处方标题 */}
+        <View style={styles.prescriptionHeader}>
+          <IconButton
+            icon="pill"
+            size={20}
+            iconColor={theme.colors.primary}
+            style={styles.cardIcon}
+          />
+          <Text
+            variant="titleMedium"
+            style={[
+              styles.prescriptionTitle,
+              { color: theme.colors.onSurface },
+            ]}
+          >
+            电子处方
+          </Text>
+        </View>
+
+        {/* 药物列表 */}
+        {cardData.medications.map((medication, index) => (
+          <Pressable
+            key={index}
+            onPress={() => handleMedicationPress(medication.deepLink)}
+          >
+            <Surface
+              style={[
+                styles.medicationCard,
+                { backgroundColor: theme.colors.surface },
+                index < cardData.medications.length - 1 && {
+                  marginBottom: verticalScale(8),
+                },
+              ]}
+              elevation={2}
             >
-              电子处方
-            </Text>
-          </View>
-          <View style={styles.cardContent}>
-            <View style={styles.cardRow}>
-              <Text
-                variant="bodySmall"
-                style={[
-                  styles.cardLabel,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                药品名称：
-              </Text>
-              <Text
-                variant="bodyMedium"
-                style={[styles.cardValue, { color: theme.colors.onSurface }]}
-              >
-                {cardData.medicationName}
-              </Text>
-            </View>
-            <View style={styles.cardRow}>
-              <Text
-                variant="bodySmall"
-                style={[
-                  styles.cardLabel,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                用量：
-              </Text>
-              <Text
-                variant="bodyMedium"
-                style={[styles.cardValue, { color: theme.colors.onSurface }]}
-              >
-                {cardData.dosage}
-              </Text>
-            </View>
-            <View style={styles.cardRow}>
-              <Text
-                variant="bodySmall"
-                style={[
-                  styles.cardLabel,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                频次：
-              </Text>
-              <Text
-                variant="bodyMedium"
-                style={[styles.cardValue, { color: theme.colors.onSurface }]}
-              >
-                {cardData.frequency}
-              </Text>
-            </View>
-            <View style={styles.cardRow}>
-              <Text
-                variant="bodySmall"
-                style={[
-                  styles.cardLabel,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                疗程：
-              </Text>
-              <Text
-                variant="bodyMedium"
-                style={[styles.cardValue, { color: theme.colors.onSurface }]}
-              >
-                {cardData.duration}
-              </Text>
-            </View>
-          </View>
-          {cardData.deepLink && (
-            <View style={styles.cardFooter}>
-              <IconButton
-                icon="open-in-new"
-                size={16}
-                iconColor={theme.colors.primary}
-              />
-              <Text
-                variant="bodySmall"
-                style={[styles.cardLink, { color: theme.colors.primary }]}
-              >
-                在第三方应用中打开
-              </Text>
-            </View>
-          )}
-        </Surface>
-      </Pressable>
+              <View style={styles.medicationHeader}>
+                <View style={styles.medicationNumberBadge}>
+                  <Text
+                    variant="labelSmall"
+                    style={[
+                      styles.medicationNumber,
+                      { color: theme.colors.primary },
+                    ]}
+                  >
+                    {index + 1}
+                  </Text>
+                </View>
+                <Text
+                  variant="titleSmall"
+                  style={[
+                    styles.medicationName,
+                    { color: theme.colors.onSurface },
+                  ]}
+                >
+                  {medication.medicationName}
+                </Text>
+              </View>
+
+              <View style={styles.cardContent}>
+                <View style={styles.cardRow}>
+                  <Text
+                    variant="bodySmall"
+                    style={[
+                      styles.cardLabel,
+                      { color: theme.colors.onSurfaceVariant },
+                    ]}
+                  >
+                    用量:
+                  </Text>
+                  <Text
+                    variant="bodyMedium"
+                    style={[
+                      styles.cardValue,
+                      { color: theme.colors.onSurface },
+                    ]}
+                  >
+                    {medication.dosage}
+                  </Text>
+                </View>
+                <View style={styles.cardRow}>
+                  <Text
+                    variant="bodySmall"
+                    style={[
+                      styles.cardLabel,
+                      { color: theme.colors.onSurfaceVariant },
+                    ]}
+                  >
+                    频次:
+                  </Text>
+                  <Text
+                    variant="bodyMedium"
+                    style={[
+                      styles.cardValue,
+                      { color: theme.colors.onSurface },
+                    ]}
+                  >
+                    {medication.frequency}
+                  </Text>
+                </View>
+                <View style={styles.cardRow}>
+                  <Text
+                    variant="bodySmall"
+                    style={[
+                      styles.cardLabel,
+                      { color: theme.colors.onSurfaceVariant },
+                    ]}
+                  >
+                    疗程:
+                  </Text>
+                  <Text
+                    variant="bodyMedium"
+                    style={[
+                      styles.cardValue,
+                      { color: theme.colors.onSurface },
+                    ]}
+                  >
+                    {medication.duration}
+                  </Text>
+                </View>
+              </View>
+
+              {medication.deepLink && (
+                <View style={styles.cardFooter}>
+                  <IconButton
+                    icon="open-in-new"
+                    size={16}
+                    iconColor={theme.colors.primary}
+                    style={{ margin: 0 }}
+                  />
+                  <Text
+                    variant="bodySmall"
+                    style={[styles.cardLink, { color: theme.colors.primary }]}
+                  >
+                    在第三方应用中打开
+                  </Text>
+                </View>
+              )}
+            </Surface>
+          </Pressable>
+        ))}
+      </View>
     )
   }
 
@@ -496,7 +553,7 @@ export default function HomeScreen() {
             { maxWidth: Dimensions.get("window").width * 0.72 },
           ]}
         >
-          {item.isVoice && (
+          {/* {item.isVoice && (
             <View style={styles.voiceIndicator}>
               <IconButton
                 icon="waveform"
@@ -518,7 +575,7 @@ export default function HomeScreen() {
                 </Text>
               )}
             </View>
-          )}
+          )} */}
 
           {/* 思考中状态 */}
           {item.isThinking ? (
@@ -539,7 +596,7 @@ export default function HomeScreen() {
               {/* 处方卡片 */}
               {item.cardType === "prescription" && item.cardData && (
                 <View style={styles.cardWrapper}>
-                  {renderPrescriptionCard(item.cardData as PrescriptionCard)}
+                  {renderPrescriptionCard(item.cardData as PrescriptionData)}
                 </View>
               )}
 
@@ -662,7 +719,7 @@ export default function HomeScreen() {
             <IconButton
               icon={inputMode === "voice" ? "microphone" : "keyboard"}
               iconColor={theme.colors.primary}
-              size={24}
+              size={moderateScale(24)}
               onPress={() => {
                 setInputMode(inputMode === "voice" ? "text" : "voice")
                 if (inputMode === "voice" && isRecording) {
@@ -774,12 +831,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   messagesList: {
-    padding: 12,
-    paddingBottom: 8,
+    padding: scale(12),
+    paddingBottom: verticalScale(8),
   },
   messageContainer: {
     flexDirection: "row",
-    marginBottom: 12,
+    marginBottom: verticalScale(12),
     alignItems: "flex-end",
   },
   userMessageContainer: {
@@ -789,200 +846,243 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
   },
   avatar: {
-    marginHorizontal: 6,
+    marginHorizontal: scale(6),
   },
   messageBubble: {
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderRadius: moderateScale(18),
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(10),
     elevation: 0,
   },
   messageText: {
-    lineHeight: 20,
+    lineHeight: verticalScale(20),
   },
   voiceIndicator: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: verticalScale(6),
   },
   voiceIcon: {
     margin: 0,
-    marginRight: 4,
+    marginRight: scale(4),
   },
   voiceDuration: {
-    fontSize: 11,
+    fontSize: font(11),
   },
   messageTime: {
-    marginTop: 6,
-    fontSize: 10,
+    marginTop: verticalScale(6),
+    fontSize: font(10),
     opacity: 0.6,
   },
   bottomContainer: {
-    paddingTop: 12,
-    paddingHorizontal: 12,
+    paddingTop: verticalScale(12),
+    paddingHorizontal: scale(12),
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 4,
-    minHeight: 48,
+    gap: scale(4),
+    minHeight: verticalScale(48),
   },
   modeToggleIconContainer: {
-    width: 48,
-    height: 48,
+    width: scale(48),
+    height: verticalScale(48),
     justifyContent: "center",
     alignItems: "center",
   },
   modeToggleIcon: {
     margin: 0,
-    marginTop: 4,
+    marginTop: verticalScale(4),
   },
   voiceButtonWrapper: {
     flex: 1,
-    height: 48,
+    height: verticalScale(40),
   },
   voiceButton: {
     flex: 1,
-    borderRadius: 8,
+    borderRadius: moderateScale(8),
     borderWidth: 1,
     justifyContent: "center",
     alignItems: "center",
   },
   voiceButtonContent: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
     width: "100%",
     alignItems: "center",
     justifyContent: "center",
   },
   voiceButtonIcon: {
     margin: 0,
-    marginRight: -8,
+    marginRight: scale(-8),
   },
   voiceButtonLabel: {
-    fontSize: 16,
+    fontSize: font(14),
     fontWeight: "600",
     letterSpacing: 0.3,
   },
   voiceButtonInner: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: scale(8),
   },
   voiceButtonText: {
-    fontSize: 15,
+    fontSize: font(15),
   },
   recordingInfo: {
     alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: verticalScale(12),
+    paddingHorizontal: scale(16),
     backgroundColor: "transparent",
   },
   recordingText: {
     fontWeight: "600",
-    marginBottom: 8,
-    fontSize: 16,
+    marginBottom: verticalScale(8),
+    fontSize: font(16),
   },
   waveformContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    height: 40,
-    gap: 2,
+    height: verticalScale(40),
+    gap: scale(2),
   },
   waveformBar: {
-    width: 2.5,
-    borderRadius: 1.25,
-    minHeight: 4,
+    width: scale(2.5),
+    borderRadius: moderateScale(1.25),
+    minHeight: verticalScale(4),
   },
   textInputWrapper: {
     flex: 1,
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 4,
+    gap: scale(4),
   },
   textInput: {
     backgroundColor: "transparent",
     flex: 1,
-    minHeight: 48,
-    maxHeight: 120,
+    minHeight: verticalScale(40),
+    maxHeight: verticalScale(120),
   },
   textInputContent: {
-    paddingVertical: 8,
+    paddingVertical: verticalScale(8),
     paddingRight: 0,
   },
   textInputOutline: {
-    borderRadius: 8,
+    borderRadius: moderateScale(8),
   },
   sendIconButton: {
     margin: 0,
-    marginTop: 4,
+    marginTop: verticalScale(4),
   },
   thinkingContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    paddingVertical: 8,
+    gap: scale(6),
+    paddingVertical: verticalScale(8),
   },
   thinkingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: scale(8),
+    height: verticalScale(8),
+    borderRadius: moderateScale(4),
   },
   thinkingWrapper: {
     alignItems: "center",
-    paddingVertical: 8,
+    paddingVertical: verticalScale(8),
   },
   thinkingText: {
-    marginTop: 8,
-    fontSize: 12,
+    marginTop: verticalScale(8),
+    fontSize: font(12),
   },
   cardWrapper: {
-    marginBottom: 8,
+    marginBottom: verticalScale(8),
   },
   prescriptionCard: {
-    borderRadius: 12,
-    padding: 16,
-    marginVertical: 4,
+    borderRadius: moderateScale(12),
+    padding: scale(16),
+    marginVertical: verticalScale(4),
   },
   cardHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: verticalScale(12),
   },
   cardIcon: {
     margin: 0,
-    marginRight: 8,
+    marginRight: scale(8),
   },
   cardTitle: {
     fontWeight: "600",
+    fontSize: font(14),
   },
   cardContent: {
-    gap: 8,
+    gap: verticalScale(10),
   },
   cardRow: {
     flexDirection: "row",
     alignItems: "center",
+    paddingVertical: verticalScale(4),
   },
   cardLabel: {
-    width: 80,
-    fontSize: 12,
+    fontSize: font(13),
+    fontWeight: "500",
+    minWidth: scale(30),
+    marginRight: scale(8),
   },
   cardValue: {
     flex: 1,
+    textAlign: "left",
     fontWeight: "500",
+    fontSize: font(14),
   },
   cardFooter: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 12,
-    paddingTop: 12,
+    marginTop: verticalScale(12),
+    paddingTop: verticalScale(12),
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: "rgba(0,0,0,0.1)",
   },
   cardLink: {
     fontWeight: "500",
+  },
+  // 处方标题样式
+  prescriptionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: verticalScale(12),
+    paddingLeft: scale(4),
+  },
+  prescriptionTitle: {
+    fontWeight: "600",
+    fontSize: font(16),
+  },
+  // 单个药物卡片样式
+  medicationCard: {
+    borderRadius: moderateScale(12),
+    padding: scale(14),
+  },
+  medicationHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: verticalScale(10),
+  },
+  medicationNumberBadge: {
+    width: scale(24),
+    height: scale(24),
+    borderRadius: scale(12),
+    backgroundColor: "rgba(103, 80, 164, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: scale(8),
+  },
+  medicationNumber: {
+    fontWeight: "700",
+    fontSize: font(12),
+  },
+  medicationName: {
+    fontWeight: "600",
+    fontSize: font(15),
+    flex: 1,
   },
 })
