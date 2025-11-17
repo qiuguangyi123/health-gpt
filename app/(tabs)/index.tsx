@@ -47,11 +47,10 @@ export default function HomeScreen() {
       id: "1",
       type: "assistant",
       content:
-        process.env.EXPO_PUBLIC_QGY +
         "你好！我是豆包，有什么可以帮你的吗？你可以使用语音或文字与我交流，我还可以为您开具电子处方。",
       timestamp: new Date(),
     },
-  ])
+  ]) 
   const [isRecording, setIsRecording] = useState(false)
   const [recordingDuration, setRecordingDuration] = useState(0)
   const [isTranscribing, setIsTranscribing] = useState(false)

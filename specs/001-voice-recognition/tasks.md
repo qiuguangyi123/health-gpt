@@ -50,8 +50,8 @@ This document breaks down the voice recognition feature implementation into exec
 - [X] T009 [P] Create ASR error types in types/asr.ts
 - [X] T010 [P] Implement ASR error class with retry logic in services/alibabaASR.ts
 - [X] T011 Implement token retrieval placeholder function in services/alibabaASR.ts
-- [ ] T012 Implement audio storage service in services/audioStorage.ts
-- [ ] T013 [P] Create useNetworkStatus hook in hooks/useNetworkStatus.ts
+- [X] T012 Implement audio storage service in services/audioStorage.ts
+- [X] T013 [P] Create useNetworkStatus hook in hooks/useNetworkStatus.ts
 - [ ] T014 [P] Create error message constants in constants/voice.ts
 - [ ] T015 [P] Implement permissions utility in utils/permissions.ts
 

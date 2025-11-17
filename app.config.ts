@@ -15,15 +15,7 @@
 
 import type { ExpoConfig } from "expo/config"
 
-// 使用 require 导入 JavaScript 模块
-const { loadEnvToProcess, printEnvSummary } = require("./config/loadEnv")
-
 type EnvMode = "dev" | "uat" | "prod"
-
-console.log(
-  process.env.EXPO_PUBLIC_ALIBABA_ASR_API_URL,
-  "process.env.EXPO_PUBLIC_ALIBABA_ASR_API_URL"
-)
 // ============================================
 // Expo 配置 (Expo Configuration)
 // ============================================
