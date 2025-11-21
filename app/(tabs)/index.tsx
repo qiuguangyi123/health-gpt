@@ -1,15 +1,19 @@
 import WaveformBar from "@/components/WaveformBar"
+import { getErrorMessage } from "@/constants/voice"
+import { useAlibabaASR } from "@/hooks/useAlibabaASR"
+import { useVoiceRecording } from "@/hooks/useVoiceRecording"
 import type { ChatMessage, InputMode, PrescriptionData } from "@/types/voice"
 import { font } from "@/utils/scale"
-import * as Haptics from "expo-haptics"
 import React, { useEffect, useRef, useState } from "react"
 import {
+  Alert,
   Dimensions,
   FlatList,
   KeyboardAvoidingView,
   Linking,
   Platform,
   Pressable,
+  Share,
   StyleSheet,
   View,
 } from "react-native"
@@ -50,12 +54,27 @@ export default function HomeScreen() {
         "你好！我是豆包，有什么可以帮你的吗？你可以使用语音或文字与我交流，我还可以为您开具电子处方。",
       timestamp: new Date(),
     },
-  ]) 
-  const [isRecording, setIsRecording] = useState(false)
-  const [recordingDuration, setRecordingDuration] = useState(0)
-  const [isTranscribing, setIsTranscribing] = useState(false)
-  const durationTimer = useRef<ReturnType<typeof setInterval> | null>(null)
+  ])
   const flatListRef = useRef<FlatList>(null)
+
+  // ========== 使用真实的录音和转录 Hooks ==========
+  const {
+    status: recordingStatus,
+    duration: recordingDuration,
+    audioUri,
+    isRecording,
+    startRecording,
+    stopRecording,
+    error: recordingError,
+  } = useVoiceRecording()
+
+  const {
+    status: transcriptionStatus,
+    transcription,
+    isTranscribing,
+    transcribe,
+    error: transcriptionError,
+  } = useAlibabaASR()
 
   // Reanimated shared values for animations
   const pressScale = useSharedValue(1)
@@ -65,70 +84,105 @@ export default function HomeScreen() {
     transform: [{ scale: pressScale.value }],
   }))
 
-  // 录制时长计时器
-  useEffect(() => {
-    if (isRecording) {
-      durationTimer.current = setInterval(() => {
-        setRecordingDuration(prev => prev + 0.1)
-      }, 100)
-    } else {
-      if (durationTimer.current) {
-        clearInterval(durationTimer.current)
-        durationTimer.current = null
-      }
-    }
-    return () => {
-      if (durationTimer.current) {
-        clearInterval(durationTimer.current)
-      }
-    }
-  }, [isRecording])
+  // ========== 录音控制 ==========
 
-  const handlePressIn = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-    setIsRecording(true)
-    setRecordingDuration(0)
+  /**
+   * 按下按钮 - 开始录音
+   */
+  const handlePressIn = async () => {
+    console.log("[HomeScreen] Starting recording...")
+
+    // 按压动画
     pressScale.value = withSpring(1.05, {
       damping: 12,
       stiffness: 200,
     })
+
+    // 开始录音（Hook内部会处理权限检查和触觉反馈）
+    const success = await startRecording()
+
+    if (!success) {
+      // 录音启动失败，恢复按钮状态
+      pressScale.value = withSpring(1, {
+        damping: 12,
+        stiffness: 200,
+      })
+    }
   }
 
+  /**
+   * 松开按钮 - 停止录音并转录
+   */
   const handlePressOut = async () => {
+    console.log("[HomeScreen] Stopping recording...")
+
+    // 恢复按压动画
     pressScale.value = withSpring(1, {
       damping: 12,
       stiffness: 200,
     })
 
-    if (recordingDuration < 0.5) {
-      // 录制时间太短，取消
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
-      setIsRecording(false)
-      setRecordingDuration(0)
+    // 停止录音
+    const result = await stopRecording()
+
+    if (!result.success) {
+      // 录音失败（如时间过短），显示错误提示
+      if (result.error) {
+        const errorMsg = getErrorMessage(result.error.code)
+        Alert.alert(errorMsg.title, errorMsg.message, [
+          { text: errorMsg.action },
+        ])
+      }
       return
     }
+    console.log("[HomeScreen] ✅ 录音成功！文件路径:", result.audioUri)
+    console.log("[HomeScreen] 录音时长:", result.duration.toFixed(1), "秒")
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-    setIsRecording(false)
-    setIsTranscribing(true)
-
-    // 模拟语音转录
-    setTimeout(() => {
-      const transcript = `这是一条语音消息（${recordingDuration.toFixed(1)}秒）`
-      const newMessage: ChatMessage = {
-        id: Date.now().toString(),
-        type: "user",
-        content: transcript,
-        duration: recordingDuration,
-        timestamp: new Date(),
-        isVoice: true,
+    // 弹出分享框，让用户分享或保存录音文件
+    if (result.audioUri) {
+      try {
+        await Share.share({
+          url: result.audioUri,
+          message: `录音文件 (时长: ${result.duration.toFixed(1)}秒)`,
+        })
+        console.log("[HomeScreen] 分享对话框已打开")
+      } catch (error) {
+        console.error("[HomeScreen] 分享失败:", error)
+        // 分享失败或取消，继续正常流程
       }
+    }
 
-      setMessages(prev => [...prev, newMessage])
-      setIsTranscribing(false)
-      setRecordingDuration(0)
-      sendMessage(newMessage)
-    }, 1500)
+    // 录音成功，开始转录
+    if (result.audioUri) {
+      console.log("[HomeScreen] Transcribing audio:", result.audioUri)
+
+      const transcriptionResult = await transcribe(result.audioUri, true)
+
+      if (transcriptionResult.success && transcriptionResult.text) {
+        // 转录成功，添加到消息列表
+        const newMessage: ChatMessage = {
+          id: Date.now().toString(),
+          type: "user",
+          content: transcriptionResult.text,
+          duration: result.duration,
+          timestamp: new Date(),
+          isVoice: true,
+        }
+
+        setMessages(prev => [...prev, newMessage])
+        sendMessage(newMessage)
+
+        console.log("[HomeScreen] Message added:", transcriptionResult.text)
+      } else {
+        // 转录失败，显示错误提示
+        if (transcriptionResult.error) {
+          const errorMsg = getErrorMessage(transcriptionResult.error.code)
+          Alert.alert(errorMsg.title, errorMsg.message, [
+            { text: errorMsg.action },
+          ])
+        }
+      }
+    }
   }
 
   const handleSendText = () => {
@@ -662,9 +716,9 @@ export default function HomeScreen() {
               iconColor={theme.colors.primary}
               size={moderateScale(24)}
               onPress={() => {
-                setInputMode(inputMode === "voice" ? "text" : "voice")
-                if (inputMode === "voice" && isRecording) {
-                  setIsRecording(false)
+                // 不在录音时才允许切换模式
+                if (!isRecording) {
+                  setInputMode(inputMode === "voice" ? "text" : "voice")
                 }
               }}
               style={styles.modeToggleIcon}

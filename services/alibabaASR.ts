@@ -176,8 +176,7 @@ export async function getASRToken(): Promise<string> {
   // 返回: { token: string, expireTime: number }
 
   // 临时实现：从环境配置读取（仅用于开发）
-  const { env } = await import('@/config/env')
-  const token = env.alibaba.asrToken
+  const token = process.env.EXPO_PUBLIC_ALIBABA_ASR_TOKEN
 
   if (!token) {
     throw new ASRError(

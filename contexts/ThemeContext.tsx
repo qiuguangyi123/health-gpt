@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import React, { createContext, useContext, useEffect, useState } from "react"
 import { useColorScheme } from "react-native"
+import { MD3DarkTheme, MD3LightTheme, Provider } from "react-native-paper"
 
 type ThemeMode = "light" | "dark" | "auto"
 
@@ -24,6 +25,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const isDark =
     themeMode === "dark" ||
     (themeMode === "auto" && systemColorScheme === "dark")
+
+  const themeToken = isDark ? MD3DarkTheme : MD3LightTheme
 
   // 加载保存的主题设置
   useEffect(() => {
@@ -76,7 +79,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         toggleTheme,
       }}
     >
-      {children}
+      <Provider theme={themeToken}>{children}</Provider>
     </ThemeContext.Provider>
   )
 }

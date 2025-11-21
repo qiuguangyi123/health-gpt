@@ -1,7 +1,7 @@
 // src/utils/scale.js
 
+import * as Device from "expo-device"
 import { Dimensions } from "react-native"
-import DeviceInfo from "react-native-device-info"
 import { RFValue } from "react-native-responsive-fontsize"
 import {
   moderateScale as ms,
@@ -21,7 +21,7 @@ const BASE_HEIGHT = 812 // iPhone 11 设计稿高度
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window")
 
 // 判断是否为平板
-const isTablet = DeviceInfo.isTablet?.()
+const isTablet = Device.deviceType === Device.DeviceType.TABLET
 
 // ================================
 // 🧮 封装统一方法

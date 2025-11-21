@@ -52,8 +52,8 @@ This document breaks down the voice recognition feature implementation into exec
 - [X] T011 Implement token retrieval placeholder function in services/alibabaASR.ts
 - [X] T012 Implement audio storage service in services/audioStorage.ts
 - [X] T013 [P] Create useNetworkStatus hook in hooks/useNetworkStatus.ts
-- [ ] T014 [P] Create error message constants in constants/voice.ts
-- [ ] T015 [P] Implement permissions utility in utils/permissions.ts
+- [X] T014 [P] Create error message constants in constants/voice.ts
+- [X] T015 [P] Implement permissions utility in utils/permissions.ts
 
 **Completion Criteria**:
 - ✅ All constant values defined (MAX_DURATION=60, MIN_DURATION=0.5, etc.)
@@ -89,24 +89,24 @@ Can be fully tested by:
 
 #### Core Recording Infrastructure
 
-- [ ] T016 [US1] Create ASR_RECORDING_PRESET constant in constants/voice.ts
-- [ ] T017 [US1] Implement transcribeAudio function in services/alibabaASR.ts
-- [ ] T018 [P] [US1] Implement useVoiceRecording hook in hooks/useVoiceRecording.ts
-- [ ] T019 [P] [US1] Implement useAlibabaASR hook in hooks/useAlibabaASR.ts
+- [X] T016 [US1] Create ASR_RECORDING_PRESET constant in constants/voice.ts
+- [X] T017 [US1] Implement transcribeAudio function in services/alibabaASR.ts
+- [X] T018 [P] [US1] Implement useVoiceRecording hook in hooks/useVoiceRecording.ts
+- [X] T019 [P] [US1] Implement useAlibabaASR hook in hooks/useAlibabaASR.ts
 
 #### UI Components
 
-- [ ] T020 [P] [US1] Create RecordButton component in components/RecordButton.tsx
-- [ ] T021 [US1] Implement press animation for RecordButton using react-native-reanimated
+- [X] T020 [P] [US1] Create RecordButton component in components/RecordButton.tsx
+- [X] T021 [US1] Implement press animation for RecordButton using react-native-reanimated
 - [ ] T022 [US1] Create VoiceMessage component in components/VoiceMessage.tsx
 - [ ] T023 [US1] Add fade-in animation to VoiceMessage (200ms FadeInDown)
 
 #### Integration
 
-- [ ] T024 [US1] Integrate RecordButton into chat screen at app/(tabs)/index.tsx
-- [ ] T025 [US1] Implement recording state management in chat screen
-- [ ] T026 [US1] Connect useVoiceRecording hook to RecordButton
-- [ ] T027 [US1] Implement transcription workflow (recording → transcribe → display)
+- [X] T024 [US1] Integrate RecordButton into chat screen at app/(tabs)/index.tsx
+- [X] T025 [US1] Implement recording state management in chat screen
+- [X] T026 [US1] Connect useVoiceRecording hook to RecordButton
+- [X] T027 [US1] Implement transcription workflow (recording → transcribe → display)
 - [ ] T028 [US1] Add VoiceMessage to chat history on successful transcription
 - [ ] T029 [US1] Implement audio file cleanup after successful transcription
 - [ ] T030 [US1] Add haptic feedback on recording start in useVoiceRecording hook
